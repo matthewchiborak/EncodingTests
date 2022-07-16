@@ -4,6 +4,9 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <regex>
+#include <unordered_map>
+#include <set>
 
 Extractor::Extractor()
 {
@@ -391,6 +394,11 @@ void Extractor::ReadFromPipe(void)
     std::wstring allOutput;
     std::wstring temp;
 
+    //std::regex str_expr("T([0-9]*)\\t(.*)\\t([0-9]*)\\t");
+    std::wregex str_expr(L"T([0-9]+)");
+
+    std::unordered_map<std::wstring, std::set<std::wstring>> resultMap;
+
     for (;;)
     {
         bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
@@ -402,11 +410,57 @@ void Extractor::ReadFromPipe(void)
 
         std::wstring sOutput = myconv.from_bytes(s);
 
+        std::wstringstream wss(sOutput);
+        std::wstring line;
+        std::wstring tabseg;
+        std::wstring type;
+        std::wstring value;
+
+        while (std::getline(wss, line))
+        {
+            //std::wcout << L"LINE: " << line << L" !!!!!\n";
+            //while (std::getline(wss, line))
+            std::wstringstream sstabseg(line);
+            std::getline(sstabseg, tabseg, L'\t');
+            if (std::regex_match(tabseg, str_expr))
+            {
+                std::getline(sstabseg, tabseg, L'\t');
+                //std::wcout << tabseg << L" ";
+                type = tabseg;
+                std::getline(sstabseg, tabseg, L'\t');
+                std::getline(sstabseg, tabseg, L'\t');
+                std::getline(sstabseg, tabseg, L'\t');
+               // std::wcout << tabseg << L"\n";
+                value = tabseg;
+
+                if (resultMap.find(type) == resultMap.end())
+                {
+                    std::set<std::wstring> newValueMap;
+                    resultMap.insert(std::pair<std::wstring, std::set<std::wstring>>(type, std::move(newValueMap)));
+                }
+
+                resultMap[type].insert(value);
+            }
+        }
+
+
+
+
+
+        //std::wstringstream wss(sOutput);
+        
+        //int Tpos = sOutput.find(L"T");
+        //wss.seekg(Tpos);
+
+        //std::wstring focus = sOutput.substr(Tpos);
+
+
+
         //allOutput += sOutput;
 
         //std::wcout << sOutput << L"\n";
 
-        std::wstringstream wss(sOutput);
+        /*std::wstringstream wss(sOutput);
         std::getline(wss, temp, L'\t');
 
         if (temp[0] == 'T')
@@ -417,7 +471,7 @@ void Extractor::ReadFromPipe(void)
             std::getline(wss, temp, L'\t');
             std::getline(wss, temp, L'\t');
             std::wcout << temp << "\n";
-        }
+        }*/
 
         //std::cout << s << "\n";
 
@@ -435,6 +489,18 @@ void Extractor::ReadFromPipe(void)
         //bSuccess = WriteFile(hParentStdOut, chBuf,
           //  dwRead, &dwWritten, NULL);
         //if (!bSuccess) break;
+    }
+
+
+    for (std::unordered_map<std::wstring, std::set<std::wstring>>::iterator it = resultMap.begin(); it != resultMap.end(); it++)
+    {
+        std::wcout << L"Type:\n";
+        std::wcout << it->first << L"\n";
+
+        for (std::set<std::wstring>::iterator itset = it->second.begin(); itset != it->second.end(); itset++)
+        {
+            std::wcout << *itset << L"\n";
+        }
     }
 
     //std::wstring sOutput = myconv.from_bytes(sAllOut);

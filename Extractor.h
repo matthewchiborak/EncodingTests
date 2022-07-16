@@ -6,6 +6,12 @@
 
 #define BUFSIZE 4096 
 
+struct Entity
+{
+	std::wstring type;
+	std::wstring value;
+};
+
 class Extractor
 {
 public:
