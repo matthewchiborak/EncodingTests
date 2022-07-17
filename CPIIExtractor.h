@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-#define BUFSIZE 4096 
+#define BUFSIZE 100//4096 
 
 class PIIExtractor
 {

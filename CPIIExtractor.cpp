@@ -1,4 +1,4 @@
-#include "CPIIExtractor.h"
+﻿#include "CPIIExtractor.h"
 
 #include <codecvt>
 #include <sstream>
@@ -101,7 +101,7 @@ void PIIExtractor::WriteToPipe(void)
     CHAR chBuf[BUFSIZE];
     BOOL bSuccess = FALSE;
 
-    std::wstring s = L".O	This is a good article. Click  here for more information.\nT0	TERM	33	45	good article	good article	TERM	1011\nT1	TERM	84	93	Page semi	Page semi	TERM	1011\nT2	PERSON	84	93	Test Person	Page semi	TERM	1011\n.O	Federer at the 2016 Wimbledon Championships";
+    std::wstring s = L"॰॰॰15॰॰॰\n.O	This is a good article. Click  here for more information.\nT0	TERM	33	45	goød article	good article	TERM	1011\nT1	TERM	84	93	Page semi	Page semi	TERM	1011\n॰॰॰20॰॰॰\nT2	PERSON	84	93	Test Person	Page semi	TERM	1011\n.O	Federer at the 2016 Wimbledon Championships";
     
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
     std::string sToWrite = myconv.to_bytes(s);
@@ -124,11 +124,15 @@ void PIIExtractor::ReadFromPipe(void)
 
     std::wregex oEntityStartExpression(L"T([0-9]+)");
     std::wregex oLineStartExpression(L"^((\.O)|(T([0-9]+)))\\t");
+    std::wregex oHeaderExpression(L"^॰॰॰([0-9]+)॰॰॰");
 
-    std::unordered_map<std::wstring, std::set<std::wstring>> mapExtractedEntities;
+    std::unordered_map<unsigned int, std::unordered_map<std::wstring, std::set<std::wstring>>> mapExtractedEntities;
 
     std::wstring sLastLine = L"";
     std::wstring sTemp;
+
+    unsigned int iCurrentFile = 0;
+    unsigned int iNextFile = 0;
 
     for (;;)
     {
@@ -139,8 +143,6 @@ void PIIExtractor::ReadFromPipe(void)
 
         std::wstring sOutput = oConverter.from_bytes(sOutputUTF8);
 
-        std::wcout << L"The output: " << sOutput << L"\n";
-
         std::wstringstream ssOutput(sOutput);
         std::wstring sCurrentLine;
         std::wstring sTabSegment;
@@ -149,6 +151,17 @@ void PIIExtractor::ReadFromPipe(void)
 
         while (std::getline(ssOutput, sCurrentLine))
         {
+            if (std::regex_search(sCurrentLine, oHeaderExpression))
+            {
+                std::wstring sFileNumber = sCurrentLine.substr(3, sCurrentLine.length() - 7);
+                iNextFile = std::stoi(sFileNumber);
+
+                if (iCurrentFile <= 0)
+                    iCurrentFile = iNextFile;
+
+                continue;
+            }
+
             if (!std::regex_search(sCurrentLine, oLineStartExpression))
             {
                 sLastLine += sCurrentLine;
@@ -170,25 +183,27 @@ void PIIExtractor::ReadFromPipe(void)
                 std::getline(sstabseg, sTabSegment, L'\t');
                 sValue = sTabSegment;
 
-                if (mapExtractedEntities.find(sType) == mapExtractedEntities.end())
-                {
-                    std::set<std::wstring> newValueMap;
-                    mapExtractedEntities.insert(std::pair<std::wstring, std::set<std::wstring>>(sType, std::move(newValueMap)));
-                }
+                mapExtractedEntities[iCurrentFile][sType].insert(sValue);
 
-                mapExtractedEntities[sType].insert(sValue);
+                if (iNextFile != iCurrentFile)
+                    iCurrentFile = iNextFile;
             }
         }
     }
 
-    for (std::unordered_map<std::wstring, std::set<std::wstring>>::iterator it = mapExtractedEntities.begin(); it != mapExtractedEntities.end(); it++)
+    for (std::unordered_map<unsigned int, std::unordered_map<std::wstring, std::set<std::wstring>>>::iterator itFileGroup = mapExtractedEntities.begin(); itFileGroup != mapExtractedEntities.end(); itFileGroup++)
     {
-        std::wcout << L"Type:\n";
-        std::wcout << it->first << L"\n";
+        std::wcout << L"File: " << itFileGroup->first << L"\n";
 
-        for (std::set<std::wstring>::iterator itset = it->second.begin(); itset != it->second.end(); itset++)
+        for (std::unordered_map<std::wstring, std::set<std::wstring>>::iterator it = itFileGroup->second.begin(); it != itFileGroup->second.end(); it++)
         {
-            std::wcout << *itset << L"\n";
+            std::wcout << L"Type:\n";
+            std::wcout << it->first << L"\n";
+
+            for (std::set<std::wstring>::iterator itset = it->second.begin(); itset != it->second.end(); itset++)
+            {
+                std::wcout << *itset << L"\n";
+            }
         }
     }
 }

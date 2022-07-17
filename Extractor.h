@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <vector>
 
-#define BUFSIZE 100//4096 
+#define BUFSIZE 4096 
 
 struct Entity
 {
