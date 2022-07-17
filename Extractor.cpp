@@ -126,7 +126,7 @@ int Extractor::ExtractEntities2(int argc, char* argv[])
     // Read from pipe that is the standard output for child process. 
 
     printf("\n->Contents of child process STDOUT:\n\n");
-    ReadFromPipe();
+    ReadFromPipe2();
 
     printf("\n->End of parent execution.\n");
 
@@ -201,7 +201,7 @@ int Extractor::ExtractEntities3(int argc, char* argv[])
     // Read from pipe that is the standard output for child process. 
 
     printf("\n->Contents of child process STDOUT:\n\n");
-    ReadFromPipe();
+    ReadFromPipe2();
 
     printf("\n->End of parent execution.\n");
 
@@ -364,7 +364,7 @@ void Extractor::WriteToPipe(void)
     {
         ///
         //std::wstring s = L"ø Roger Federer and also Tim Smith but also Jerry Sfren and also this character w/e it is\nT0	TERM	33	45	good article	good article	TERM	1011\nT1	TERM	84	93	Page semi	Page semi	TERM	1011";
-        std::wstring s = L".O	This is a good article. Click here for more information.\nT0	TERM	33	45	good article	good article	TERM	1011\nT1	TERM	84	93	Page semi	Page semi	TERM	1011\n.O	Federer at the 2016 Wimbledon Championships";
+        std::wstring s = L".O	This is a good article. Click here for more information.\nT0	TERM	33	45	good article	good article	TERM	1011\nT1	TERM	84	93	Page semi	Page semi	TERM	1011\nT2	PERSON	84	93	Test Person	Page semi	TERM	1011\n.O	Federer at the 2016 Wimbledon Championships";
         std::string sToWrite = wstring_to_utf8(s);
         dwRead = sToWrite.size() * sizeof(char);
 
@@ -396,6 +396,7 @@ void Extractor::ReadFromPipe(void)
 
     //std::regex str_expr("T([0-9]*)\\t(.*)\\t([0-9]*)\\t");
     std::wregex str_expr(L"T([0-9]+)");
+    std::wregex fullLine_expr(L"(.*)\\n$");
 
     std::unordered_map<std::wstring, std::set<std::wstring>> resultMap;
 
@@ -410,6 +411,8 @@ void Extractor::ReadFromPipe(void)
 
         std::wstring sOutput = myconv.from_bytes(s);
 
+        std::wcout << L"The output: " << sOutput << L"\n";
+
         std::wstringstream wss(sOutput);
         std::wstring line;
         std::wstring tabseg;
@@ -418,6 +421,11 @@ void Extractor::ReadFromPipe(void)
 
         while (std::getline(wss, line))
         {
+            if (std::regex_match(line, fullLine_expr))
+            {
+                int ghdkjfghl = 5;
+            }
+
             //std::wcout << L"LINE: " << line << L" !!!!!\n";
             //while (std::getline(wss, line))
             std::wstringstream sstabseg(line);
@@ -430,7 +438,7 @@ void Extractor::ReadFromPipe(void)
                 std::getline(sstabseg, tabseg, L'\t');
                 std::getline(sstabseg, tabseg, L'\t');
                 std::getline(sstabseg, tabseg, L'\t');
-               // std::wcout << tabseg << L"\n";
+                // std::wcout << tabseg << L"\n";
                 value = tabseg;
 
                 if (resultMap.find(type) == resultMap.end())
@@ -442,9 +450,7 @@ void Extractor::ReadFromPipe(void)
                 resultMap[type].insert(value);
             }
         }
-
-
-
+    }
 
 
         //std::wstringstream wss(sOutput);
@@ -489,7 +495,8 @@ void Extractor::ReadFromPipe(void)
         //bSuccess = WriteFile(hParentStdOut, chBuf,
           //  dwRead, &dwWritten, NULL);
         //if (!bSuccess) break;
-    }
+    
+    
 
 
     for (std::unordered_map<std::wstring, std::set<std::wstring>>::iterator it = resultMap.begin(); it != resultMap.end(); it++)
@@ -523,5 +530,88 @@ void Extractor::ReadFromPipe(void)
             mode = 1;
         }
     }*/
+}
+
+void Extractor::ReadFromPipe2(void)
+{
+    DWORD dwRead, dwWritten;
+    CHAR chBuf[BUFSIZE];
+    BOOL bSuccess = FALSE;
+    HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+
+    
+
+    std::wregex str_expr(L"T([0-9]+)");
+    std::wregex lineStart(L"^((\.O)|(T([0-9]+)))\\t");
+
+    std::unordered_map<std::wstring, std::set<std::wstring>> resultMap;
+
+    std::wstring sLastLine = L"";
+    std::wstring temp;
+
+    for (;;)
+    {
+        bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+        if (!bSuccess || dwRead == 0) break;
+
+        std::string s(chBuf, dwRead);
+
+
+        std::wstring sOutput = myconv.from_bytes(s);
+
+        std::wcout << L"The output: " << sOutput << L"\n";
+
+        std::wstringstream wss(sOutput);
+        std::wstring line;
+        std::wstring tabseg;
+        std::wstring type;
+        std::wstring value;
+
+        while (std::getline(wss, line))
+        {
+            if (!std::regex_search(line, lineStart))
+            {
+                sLastLine += line;
+                line = L"";
+            }
+
+            temp = sLastLine;
+            sLastLine = line;
+            line = temp;
+
+            std::wstringstream sstabseg(line);
+            std::getline(sstabseg, tabseg, L'\t');
+            if (std::regex_match(tabseg, str_expr))
+            {
+                std::getline(sstabseg, tabseg, L'\t');
+                type = tabseg;
+                std::getline(sstabseg, tabseg, L'\t');
+                std::getline(sstabseg, tabseg, L'\t');
+                std::getline(sstabseg, tabseg, L'\t');
+                value = tabseg;
+
+                if (resultMap.find(type) == resultMap.end())
+                {
+                    std::set<std::wstring> newValueMap;
+                    resultMap.insert(std::pair<std::wstring, std::set<std::wstring>>(type, std::move(newValueMap)));
+                }
+
+                resultMap[type].insert(value);
+            }
+        }
+    }
+
+    for (std::unordered_map<std::wstring, std::set<std::wstring>>::iterator it = resultMap.begin(); it != resultMap.end(); it++)
+    {
+        std::wcout << L"Type:\n";
+        std::wcout << it->first << L"\n";
+
+        for (std::set<std::wstring>::iterator itset = it->second.begin(); itset != it->second.end(); itset++)
+        {
+            std::wcout << *itset << L"\n";
+        }
+    }
 }
 

@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <vector>
 
-#define BUFSIZE 4096 
+#define BUFSIZE 100//4096 
 
 struct Entity
 {
@@ -45,6 +45,9 @@ protected:
 	void CreateChildProcess(void);
 	void WriteToPipe(void);
 	void ReadFromPipe(void);
+
+	void ReadFromPipe2(void);
+
 	//void ErrorExit(PTSTR error);
 };
 
