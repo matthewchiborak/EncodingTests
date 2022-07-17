@@ -3,14 +3,16 @@
 
 #include <iostream>
 #include "Extractor.h"
+#include "CPIIExtractor.h"
 
 int main(int argc, char* argv[])
 {
     std::cout << "Hello World!\n";
 
-    Extractor extractor;
-    //extractor.EncodingSeparateTest();
-    std::cout << extractor.ExtractEntities3(argc, argv) << "\n";
+    //Extractor extractor;
+    //std::cout << extractor.ExtractEntities3(argc, argv) << "\n";
+    PIIExtractor ext;
+    ext.ExtractEntities();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

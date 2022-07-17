@@ -139,10 +139,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CPIIExtractor.cpp" />
     <ClCompile Include="EncodingTestingAndOutputHandling.cpp" />
     <ClCompile Include="Extractor.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CPIIExtractor.h" />
     <ClInclude Include="Extractor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
